@@ -16,3 +16,8 @@ sudo chown 100:100 certs/<domain>.*
 sudo cp ./certs/<domain>.crt /usr/local/share/ca-certificates/
 sudo update-ca-certificates
 ```
+
+# Добавление ключа из нестандартного места
+```
+ssh-add <private_key>
+```

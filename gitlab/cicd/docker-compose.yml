@@ -1,0 +1,47 @@
+version: "3.9"
+
+networks:
+  gitlabnet:
+    name: gitlabnet
+    driver: bridge
+
+services:
+  gitlab:
+    image: gitlab/gitlab-ce:latest
+    container_name: gitlab
+    restart: unless-stopped
+    hostname: gitlab.farengier.local
+    shm_size: "512m"
+    environment:
+      GITLAB_OMNIBUS_CONFIG: |
+        external_url 'https://gitlab.farengier.local'
+        nginx['ssl_certificate'] = "/etc/gitlab/ssl/gitlab.farengier.local.crt"
+        nginx['ssl_certificate_key'] = "/etc/gitlab/ssl/gitlab.farengier.local.key"
+        gitlab_rails['gitlab_shell_ssh_port'] = 2222
+        registry_external_url 'http://gitlab.farengier.local:5050'
+    ports:
+      - "80:80"
+      - "443:443"
+      - "2222:22"
+      - "5050:5050"
+    volumes:
+      - ./config:/etc/gitlab
+      - ./logs:/var/log/gitlab
+      - ./data:/var/opt/gitlab
+      - ./backups:/var/opt/gitlab/backups
+    networks:
+      gitlabnet:
+        aliases:
+          - gitlab.farengier.local
+  gitlab-runner:
+    image: gitlab/gitlab-runner:alpine
+    container_name: gitlab-runner
+    restart: unless-stopped
+    depends_on:
+      - gitlab
+    volumes:
+      - ./runner-config:/etc/gitlab-runner
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./config/ssl/gitlab.volgit.local.crt:/etc/gitlab-runner/certs/gitlab.farengier.local.crt:ro
+    networks:
+      - gitlabnet

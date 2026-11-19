@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"sync"
 	"time"
 )
@@ -67,6 +68,44 @@ func (m *Manager) Register(name string, comp Component, timeout time.Duration, d
 
 	if _, exists := m.nodes[name]; exists {
 		return fmt.Errorf("компонент %q уже зарегистрирован", name)
+	}
+
+	// Проверяем, что все зависимости существуют
+	for _, depName := range dependsOn {
+		if _, exists := m.nodes[depName]; !exists {
+			return fmt.Errorf("компонент %q зависит от несуществующего компонента %q", name, depName)
+		}
+	}
+
+	// TODO Тчательно проверить логику работы алгоритма проверки цикличности графа
+
+	// Проверка на циклические зависимости при добавлении нового узла
+	// Новый узел добавляет рёбра: name -> depName для каждого depName в dependsOn
+	// Цикл возникает, если существует путь от какого-либо depName обратно к name
+	state := make(map[string]int) // 0 = не посещен, 1 = в процессе, 2 = проверен
+	var visit func(cur string) bool
+	visit = func(cur string) bool {
+		if cur == name {
+			return true // нашли путь обратно к новому узлу — цикл!
+		}
+		if state[cur] == 1 {
+			return false // петля в Dodd-графе, но не к name
+		}
+		if state[cur] == 2 || len(m.nodes[cur].dependencies) == 0 {
+			return false
+		}
+		state[cur] = 1
+		if slices.ContainsFunc(m.nodes[cur].dependencies, visit) {
+			return true
+		}
+		state[cur] = 2
+		return false
+	}
+
+	for _, depName := range dependsOn {
+		if visit(depName) {
+			return fmt.Errorf("добавление компонента %q создаст циклическую зависимость", name)
+		}
 	}
 
 	m.nodes[name] = &node{

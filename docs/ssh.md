@@ -21,3 +21,5 @@ sudo update-ca-certificates
 ```
 ssh-add <private_key>
 ```
+
+ssh -o ServerAliveInterval=10 -o ServerAliveCountMax=3 <user>@<host> 

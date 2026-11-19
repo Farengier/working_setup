@@ -1,4 +1,7 @@
 # Собираем image
+docker login <registry> -u {keyid} -p {password}
+docker tag {image}:{tag} <registry>/{repository_name}:{tag}
+docker push <registry>/{repository_name}:{tag}
 docker buildx build -t <имя> .
 
 # Запускаем image
